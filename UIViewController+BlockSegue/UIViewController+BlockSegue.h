@@ -28,10 +28,14 @@
 #import <UIKit/UIKit.h>
 
 typedef void (^UIViewControllerSegueBlock) (id sender, id destinationVC, UIStoryboardSegue *segue);
+typedef void (^UIViewControllerCompletionBlock) (id completingVC);
 
 @interface UIViewController (BlockSegue)
 
--(void)configureSegue:(NSString *)identifier withBlock:(UIViewControllerSegueBlock)block;
--(void)performSegueWithIdentifier:(NSString *)identifier sender:(id)sender withBlock:(UIViewControllerSegueBlock)block;
+-(void)configureSegue:(NSString *)identifier withSegueBlock:(UIViewControllerSegueBlock)block completion:(UIViewControllerCompletionBlock)completion;
+-(void)performSegueWithIdentifier:(NSString *)identifier sender:(id)sender withSegueBlock:(UIViewControllerSegueBlock)block completion:(UIViewControllerCompletionBlock)completion;
+
+- (UIViewControllerCompletionBlock)segue_completion;
+- (void)setSegue_completion:(UIViewControllerCompletionBlock)completion;
 
 @end

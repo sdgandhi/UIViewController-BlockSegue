@@ -29,6 +29,7 @@
 #import <objc/runtime.h>
 
 static const void *UIViewControllerDictionaryBlockKey = &UIViewControllerDictionaryBlockKey;
+static const void *UIViewControllerCompletionBlockKey = &UIViewControllerCompletionBlockKey;
 
 @implementation UIViewController (BlockSegue)
 
@@ -45,6 +46,13 @@ void BlockSegue(void) {
     method_setImplementation(originalMethod, swizzledImplementation);
 }
 
+- (UIViewControllerCompletionBlock)segue_completion {
+    return objc_getAssociatedObject(self, UIViewControllerCompletionBlockKey);
+}
+
+- (void)setSegue_completion:(UIViewControllerCompletionBlock)completion {
+    objc_setAssociatedObject(self, UIViewControllerCompletionBlockKey, completion, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+}
 
 -(void)jmg_prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
     if (segue.identifier == nil) {
@@ -58,6 +66,9 @@ void BlockSegue(void) {
 
     UIViewControllerSegueBlock segueBlock = self.jmg_dictionaryBlock[segue.identifier];
     segueBlock(sender, segue.destinationViewController, segue);
+    
+    UIViewControllerCompletionBlock completionBlock = self.jmg_dictionaryBlock[[segue.identifier stringByAppendingString:@"_completion"]];
+    ((UIViewController *)segue.destinationViewController).segue_completion = completionBlock;
 }
 
 -(NSMutableDictionary *)jmg_dictionaryBlock {
@@ -73,7 +84,7 @@ void BlockSegue(void) {
 }
 
 #pragma mark - Public interface
--(void)configureSegue:(NSString *)identifier withBlock:(UIViewControllerSegueBlock)block {
+-(void)configureSegue:(NSString *)identifier withSegueBlock:(UIViewControllerSegueBlock)block completion:(UIViewControllerCompletionBlock)completion {
     if (!identifier) {
         @throw [NSException exceptionWithName:NSInvalidArgumentException reason:@"Segue identifier can not be nil" userInfo:nil];
     }
@@ -84,18 +95,19 @@ void BlockSegue(void) {
 
     NSMutableDictionary *dBlocks = self.jmg_dictionaryBlock ?: [self jmg_createDictionaryBlock];
     [dBlocks setObject:block forKey:identifier];
+    [dBlocks setObject:completion forKey:[identifier stringByAppendingString:@"_completion"]];
 }
 
--(void)performSegueWithIdentifier:(NSString *)identifier sender:(id)sender withBlock:(UIViewControllerSegueBlock)block {
+-(void)performSegueWithIdentifier:(NSString *)identifier sender:(id)sender withSegueBlock:(UIViewControllerSegueBlock)block completion:(UIViewControllerCompletionBlock)completion {
     if (!identifier) {
         @throw [NSException exceptionWithName:NSInvalidArgumentException reason:@"Segue identifier can not be nil" userInfo:nil];
     }
 
-    if (!block) {
+    if (!block || !completion) {
         return ;
     }
 
-    [self configureSegue:identifier withBlock:block];
+    [self configureSegue:identifier withSegueBlock:block completion:completion];
     [self performSegueWithIdentifier:identifier sender:sender];
 }
 
